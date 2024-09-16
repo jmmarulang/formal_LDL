@@ -19,9 +19,9 @@ Require Import mathcomp_extra analysis_extra.
 (*                                                                            *)
 (* ## Definitions                                                             *)
 (* - `type_translation`: the real-valued translation of ldl_type into the     *)
-(*   corresponding type of the interpretation; maps `Bool_T` to $\mathbb R$   *)
-(* - `ereal_type_translation`: same as before, but maps `Bool_T` to $\bar{\mathbb R}}$ *)
-(* - `bool_type_translation`: type translation for the boolean interpretation; *)
+(*   corresponding type of the interpretation; maps `Bool_T` to $\mathbb R$   *) 
+(* - `ereal_type_translation`: same as before, but maps `Bool_T` to $\bar{\mathbb R}}$ *) 
+(* - `bool_type_translation`: type translation for the boolean interpretation; *) 
 (*   maps `Bool_T` to `bool`                                                  *)
 (* - `bool_translation`: maps an LDL-formula to a Boolean formula, with the   *)
 (*   obvious interpretation                                                   *)
@@ -64,7 +64,7 @@ Reserved Notation "[[ e ]]_dl2" (at level 10, format "[[ e ]]_dl2").
 Inductive flag := def | undef.
 
 Inductive ldl_type :=
-| Bool_T of flag
+| Bool_T of flag (* what is of? Is it just to indicate that receives a parameter ? -J*)
 | Index_T of nat
 | Real_T
 | Vector_T of nat
@@ -82,7 +82,7 @@ Inductive expr : ldl_type -> Type :=
   (* base expressions *)
   | ldl_real : R -> expr Real_T
   | ldl_bool : forall p, bool -> expr (Bool_T p)
-  | ldl_idx : forall n, 'I_n -> expr (Index_T n)
+  | ldl_idx : forall n, 'I_n -> expr (Index_T n) (*Like the fin type?*)
   | ldl_vec : forall n, n.-tuple R -> expr (Vector_T n)
   (* connectives *)
   | ldl_and : forall x, seq (expr (Bool_T x)) -> expr (Bool_T x)
@@ -91,13 +91,13 @@ Inductive expr : ldl_type -> Type :=
   (* comparisons *)
   | ldl_cmp : forall x, comparison -> expr Real_T -> expr Real_T -> expr (Bool_T x)
   (* networks and applications *)
-  | ldl_fun : forall n m, (n.-tuple R -> m.-tuple R) -> expr (Fun_T n m)
+  | ldl_fun : forall n m, (n.-tuple R -> m.-tuple R) -> expr (Fun_T n m) (*what is all this? -J*)
   | ldl_app : forall n m, expr (Fun_T n m) -> expr (Vector_T n) -> expr (Vector_T m)
   | ldl_lookup : forall n, expr (Vector_T n) -> expr (Index_T n) -> expr Real_T.
 
 End expr.
 
-HB.instance Definition _ (R : realType) b :=
+HB.instance Definition _ (R : realType) b := (* What is HB? What is instance? What is this def for? -J*)
   @gen_eqMixin (@expr R (Bool_T b)).
 
 Declare Scope ldl_scope.
@@ -193,7 +193,7 @@ Definition type_translation (t : ldl_type) : Type:=
   | Fun_T n m => n.-tuple R -> m.-tuple R
 end.
 
-Definition bool_type_translation (t : ldl_type) : Type:=
+Definition bool_type_translation (t : ldl_type) : Type :=
   match t with
   | Bool_T x => bool
   | Real_T => R
@@ -283,15 +283,20 @@ Qed.
 
 End product_dl_mul.
 
-Section fuzzy_translation.
+Section fuzzy_translation. 
+
 Local Open Scope ring_scope.
 Local Open Scope ldl_scope.
 Context {R : realType}.
-Variables (l : DL) (p : R).
+Variables (l : DL) (p : R). 
 
-Fixpoint translation {t} (e : @expr R t) {struct e} : type_translation t :=
+Print divq. 
+
+Print "%:R ". 
+
+Fixpoint translation {t} (e : @expr R t) {struct e} : type_translation t := (*what is struct? -J*)
    match e in expr t return type_translation t with
-   | ldl_bool _ true => (1%R : type_translation (Bool_T _))
+   | ldl_bool _ true => (1%R : type_translation (Bool_T _)) (*redundat? -J*)
    | ldl_bool _ false => (0%R : type_translation (Bool_T _))
    | ldl_real r => r%R
    | ldl_idx n i => i
@@ -329,6 +334,8 @@ Section dl2_ereal_translation.
 Local Open Scope ereal_scope.
 Local Open Scope ldl_scope.
 Context {R : realType}.
+
+
 
 Fixpoint dl2_ereal_translation {t} (e : @expr R t) {struct e} : ereal_type_translation t :=
   match e in expr t return ereal_type_translation t with
