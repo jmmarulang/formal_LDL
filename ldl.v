@@ -108,6 +108,8 @@ Notation "a `=> b" := (ldl_or [:: (ldl_not a); b]) (at level 55).
 Notation "`~ a"    := (ldl_not a) (at level 75).
 Definition ldl_add (R : realType) := ldl_fun (fun (t : 2.-tuple R) => [tuple [tnth t 0] + [tnth t 1] ])%R.
 (*TO DO: FIX AS above all lets and R*)
+Print tnth. 
+ 
 Let ldl_mul {R : realType} := ldl_fun (fun (t : 2.-tuple R) => [tuple [tnth t 0] * [tnth t 1] ])%R.
 Let ldl_sub {R : realType} := ldl_fun (fun (t : 2.-tuple R)
    => [tuple [tnth t 0] - [tnth t 1] ])%R.
@@ -330,12 +332,11 @@ where "{[ e ]}" := (translation e).
 
 End fuzzy_translation.
 
+
 Section dl2_ereal_translation.
 Local Open Scope ereal_scope.
 Local Open Scope ldl_scope.
 Context {R : realType}.
-
-
 
 Fixpoint dl2_ereal_translation {t} (e : @expr R t) {struct e} : ereal_type_translation t :=
   match e in expr t return ereal_type_translation t with
