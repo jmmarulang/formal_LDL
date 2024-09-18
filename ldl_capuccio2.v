@@ -36,7 +36,7 @@ Section constant.
 Context {R : realType}.
 
 Inductive constant := 
-  | fuzzy_c of {nonneg \bar R} 
+  | fuzzy_c of R
   | true_c | false_c 
   | one_c | zero_c 
   | top_c | bot_c.
@@ -133,7 +133,7 @@ Context {R : realType}.
 
 Definition type_translation (t : ldl_type) : Type:=
   match t with
-  | Fuzzy_T => {nonneg \bar R}
+  | Fuzzy_T => \bar R
   | Real_T => R
   | Vector_T n => n.-tuple R
   | Index_T n => 'I_n
@@ -165,7 +165,7 @@ Fixpoint bool_translation {t} (e : @expr R t) : bool_type_translation t := (*???
   | ldl_zero => false
   | ldl_top => true
   | ldl_bot => false
-  | ldl_fuzzy r => if (r%:num < 1) then false else true
+  | ldl_fuzzy r => if (r < 1) %R then false else true
   | ldl_real r => r 
   | ldl_idx n i => i
   | ldl_vec n t => t
@@ -194,13 +194,13 @@ Context {R : realType}.
 
 Fixpoint translation {t} (e : @expr R t) {struct e} : type_translation t := (*what is struct? -J*)
   match e in expr t return type_translation t with 
-  | ldl_true => +oo%:nng
-  | ldl_false => 0%:nng
-  | ldl_one => 1%:nng
-  | ldl_zero => 0%:nng
-  | ldl_top => +oo%:nng
-  | ldl_bot => 1%:nng
-  | ldl_fuzzy r => r
+  | ldl_true => +oo
+  | ldl_false => 0
+  | ldl_one => 1
+  | ldl_zero => 0
+  | ldl_top => +oo
+  | ldl_bot => 1
+  | ldl_fuzzy r => abse r%:E
 
   | ldl_real r => r
   | ldl_idx n i => i
@@ -209,13 +209,12 @@ Fixpoint translation {t} (e : @expr R t) {struct e} : type_translation t := (*wh
   | a `/\ b =>  mine << a >> << b >>
   | a `\/ b => maxe << a >> << b >>
   | `~ a => 
-    if << a >>%:num%:E is (v%:E) then 
-      if v == 0 %R then 
-        +oo%:nng 
-      else inv v
-    else 0%:nng
-  | a `+ b => (<< a >>%:num + << b >>%:num)%:nng
-  | a `* b => (<< a >>%:num + << b >>%:num)%:nng
+    if << a >> is (v%:E) then 
+      if v == 0 %R then +oo 
+      else (v^-1%:E ) 
+    else 0
+  | a `+ b => adde << a >> << b >>
+  | a `* b => mule << a >> << b >>
 
   | ldl_fun n m f => f 
   | ldl_app n m f v => << f >> << v >>

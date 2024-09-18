@@ -291,7 +291,6 @@ Local Open Scope ring_scope.
 Local Open Scope ldl_scope.
 Context {R : realType}.
 Variables (l : DL) (p : R). 
-
 Print divq. 
 
 Print "%:R ". 
@@ -337,6 +336,7 @@ Section dl2_ereal_translation.
 Local Open Scope ereal_scope.
 Local Open Scope ldl_scope.
 Context {R : realType}.
+
 
 Fixpoint dl2_ereal_translation {t} (e : @expr R t) {struct e} : ereal_type_translation t :=
   match e in expr t return ereal_type_translation t with
