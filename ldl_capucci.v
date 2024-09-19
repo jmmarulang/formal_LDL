@@ -165,7 +165,7 @@ Fixpoint bool_translation {t} (e : @expr R t) : bool_type_translation t := (*???
   | ldl_zero => false
   | ldl_top => true
   | ldl_bot => false
-  | ldl_fuzzy r => if (r < 1) %R then false else true
+  | ldl_fuzzy r => ~~ (r < 1) %R 
   | ldl_real r => r 
   | ldl_idx n i => i
   | ldl_vec n t => t
@@ -174,7 +174,7 @@ Fixpoint bool_translation {t} (e : @expr R t) : bool_type_translation t := (*???
   | a `\/ b => << a >> || << b >> 
   | `~ a => ~~ << a >>
   | a `+ b => << a >> || << b >>
-  | a `* b => << a >> || << b >> 
+  | a `* b => << a >> && << b >> 
 
   | ldl_fun n m f => f
   | ldl_app n m f v => << f >> << v >>
@@ -200,7 +200,7 @@ Fixpoint translation {t} (e : @expr R t) {struct e} : type_translation t := (*wh
   | ldl_zero => 0
   | ldl_top => +oo
   | ldl_bot => 1
-  | ldl_fuzzy r => abse r%:E
+  | ldl_fuzzy r => `| r | %:E
 
   | ldl_real r => r
   | ldl_idx n i => i
@@ -208,7 +208,7 @@ Fixpoint translation {t} (e : @expr R t) {struct e} : type_translation t := (*wh
 
   | a `/\ b =>  mine << a >> << b >>
   | a `\/ b => maxe << a >> << b >>
-  | `~ a => 
+  | `~ a =>
     if << a >> is (v%:E) then 
       if v == 0 %R then +oo 
       else (v^-1%:E ) 
