@@ -7,7 +7,7 @@
 ##         #     GNU Lesser General Public License Version 2.1          ##
 ##         #     (see LICENSE file for the text of the license)         ##
 ##########################################################################
-## GNUMakefile for Coq 8.19.1
+## GNUMakefile for Coq 8.19.0
 
 # For debugging purposes (must stay here, don't move below)
 INITIAL_VARS := $(.VARIABLES)
@@ -45,7 +45,7 @@ HASNATDYNLINK     := $(COQMF_HASNATDYNLINK)
 OCAMLWARN         := $(COQMF_WARN)
 
 Makefile.conf: _CoqProject
-	coq_makefile -f _CoqProject analysis_extra.v dl2_ereal.v dl2.v example.v fuzzy.v ldl_capuccio.v ldl.v mathcomp_extra.v stl_ereal.v stl.v -o Makefile
+	coq_makefile -f _CoqProject analysis_extra.v dl2_ereal.v dl2.v example.v fuzzy.v ldl_capucci_positive_R.v ldl_capucci.v ldl.v mathcomp_extra.v stl_ereal.v stl.v -o Makefile
 
 # This file can be created by the user to hook into double colon rules or
 # add any other Makefile code he may need
@@ -278,7 +278,7 @@ COQDOCLIBS?=$(COQLIBS_NOML)
 # The version of Coq being run and the version of coq_makefile that
 # generated this makefile
 COQ_VERSION:=$(shell $(COQC) --print-version | cut -d " " -f 1)
-COQMAKEFILE_VERSION:=8.19.1
+COQMAKEFILE_VERSION:=8.19.0
 
 # COQ_SRC_SUBDIRS is for user-overriding, usually to add
 # `user-contrib/Foo` to the includes, we keep COQCORE_SRC_SUBDIRS for

@@ -1,3 +1,4 @@
+(*
 From HB Require Import structures.
 Require Import Coq.Program.Equality.
 From mathcomp Require Import all_ssreflect all_algebra.
@@ -234,3 +235,4 @@ Definition shadow_lifting {R : realType} n (f : 'rV_n.+1 -> R) :=
   forall p, p > 0 -> forall i, ('d f '/d i) (const_mx p) > 0.
 
 End shadow_lifting.
+*)

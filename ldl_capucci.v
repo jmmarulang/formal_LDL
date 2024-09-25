@@ -675,6 +675,7 @@ Proof.
     rewrite <- H4. by exists 0%R. 
 Qed.
 
+(*
 Lemma aku : forall a b : @expr R Fuzzy_T, 
 0 < << a >> < +oo /\ 0 < << b >> < +oo -> 
 << `~ (a `* b) >> = << (`~ a) `* (`~ b) >>.
@@ -694,7 +695,7 @@ Proof.
   destruct H9 as [s H9].
   destruct H10 as [v H10].
   simpl. rewrite H9. rewrite H10.
-
+*)
 
 (*
 Lemma ldl_dual_le : forall a b c : @expr R Fuzzy_T, << a `* b >> <= << `~ c >> <-> << a >> <= << `~ (b `* c) >>.
