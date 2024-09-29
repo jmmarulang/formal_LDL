@@ -17,8 +17,10 @@ Import Order.TTheory.
 Import numFieldTopology.Exports.
 Local Open Scope classical_set_scope.
 
+(*
 Reserved Notation "{[ e ]}" (format "{[  e  ]}").
 Reserved Notation "[[ e ]]_B" (at level 10, format "[[  e  ]]_B").
+*)
 
 Section ldl_type.
 Context {R : realType}.
@@ -231,15 +233,16 @@ Fixpoint translation {t} (e : @expr R t) {struct e} : type_translation t := (*wh
 
 End fuzzy_translation.
 
-Notation "<< e >>" := (translation e) : ldl_scope.
-
 Section some_properties. 
 Local Open Scope ring_scope.
 Local Open Scope ereal_scope.
 Local Open Scope ldl_scope.
 Context {R : realType}.
 
-Lemma total_cap : forall x : @expr R Fuzzy_T, exists y : \bar R, y = << x >>. 
+Notation "<< e >>" := (@translation R _ e) : ldl_scope.
+Notation "[[ e ]]" := (@bool_translation R _ e) : ldl_scope.
+
+Lemma total_cap : forall x : expr Fuzzy_T, exists y : \bar R, y = << x >>. 
 Proof. 
   dependent induction x.
   - eapply ex_intro. auto. 
@@ -288,311 +291,83 @@ Proof.
     -- unfold maxe. simpl. right. reflexivity.
 Qed.
 
-Lemma nneg_cap : forall x : @expr R Fuzzy_T, 0%:E <= << x >>.
+Lemma nneg_cap : forall x : expr Fuzzy_T, 0%:E <= << x >>.
 Proof.  
-  dependent destruction x using expr_ind'. 
-  (* ldl_const s *)
-  - case s. 
-    -- simpl. unfold Order.le. simpl. auto. 
-    -- simpl. unfold Order.le. simpl. auto.
-    -- simpl. unfold Order.le. simpl. auto.
-    -- simpl. unfold Order.le. simpl. auto.
-    -- simpl. unfold Order.le. simpl. auto.
-    -- simpl. unfold Order.le. simpl. auto.
-    -- simpl. unfold Order.le. simpl. auto.
+  dependent induction x. 
+  - (* ldl_const s *)
+  case c; by rewrite /= /Order.le /=.
   - (* x1 `/\ x2*)
-  assert (H : 0%:E <= << x1 >>). {apply (IHx1 x1). reflexivity. auto. }
-  move : IHx1. move => _. 
-  assert (H0 : 0%:E <= << x2 >>). {apply (IHx2 x2). reflexivity. auto. }
-  move : IHx2. move => _.  
-  simpl. 
-  destruct (total_cap x1) as [y1 H1]. 
-  destruct (total_cap x2) as [y2 H2].
-  rewrite <- H1. rewrite <- H2. 
-  rewrite <- H1 in H. rewrite <- H2 in H0.
-  destruct y1. 
-    -- destruct y2. 
-      --- destruct (or_mine s%:E s0%:E) as [H3 | H3].
-        ---- rewrite H3. apply H.
-        ---- rewrite H3. apply H0.
-      --- unfold mine. rewrite (ltry s). apply H.
-      --- unfold mine. simpl. apply H0.
-    -- destruct y2.
-      --- unfold mine. simpl. apply H0.
-      --- unfold mine. simpl. apply H.
-      --- unfold mine. simpl. apply H0.  
-    -- destruct y2.
-      --- unfold mine. unfold Order.lt. simpl. assert (H4 : s \is Num.real). { auto. } rewrite H4. apply H.
-      --- unfold mine. simpl. apply H.
-      --- unfold mine. simpl. apply H.
+  by rewrite /= le_min IHx1 // IHx2. 
   - (* x1 `\/ x2*)
-  assert (H : 0%:E <= << x1 >>). {apply (IHx1 x1). reflexivity. auto. }
-  move : IHx1. move => _. 
-  assert (H0 : 0%:E <= << x2 >>). {apply (IHx2 x2). reflexivity. auto. }
-  move : IHx2. move => _.  
-  simpl. 
-  destruct (total_cap x1) as [y1 H1]. 
-  destruct (total_cap x2) as [y2 H2].
-  rewrite <- H1. rewrite <- H2. 
-  rewrite <- H1 in H. rewrite <- H2 in H0.
-  destruct y1. 
-    -- destruct y2. 
-      --- destruct (or_maxe s%:E s0%:E) as [H3 | H3].
-        ---- rewrite H3. apply H.
-        ---- rewrite H3. apply H0.
-      --- unfold maxe. rewrite (ltry s). apply H0.
-      --- unfold maxe. simpl. apply H.
-    -- destruct y2.
-      --- unfold maxe. simpl. apply H.
-      --- unfold maxe. simpl. apply H0.
-      --- unfold maxe. simpl. apply H.  
-    -- destruct y2.
-      --- 
-      unfold maxe. unfold Order.lt. simpl. 
-      assert (H4 : s \is Num.real). { auto. } 
-      rewrite H4. apply H0.
-      --- unfold maxe. simpl. apply H0.
-      --- unfold maxe. simpl. apply H0.
+  by rewrite /= le_max IHx1 // IHx2.
   - (*`~ x*)
-  assert (H : 0%:E <= << x >>). {apply (IHx x). reflexivity. auto. }
-  move : IHx. move => _.
-  simpl. destruct << x >>.
-    -- destruct (s == 0%R).
-      --- apply (le0y ).
-      --- 
-      unfold Order.le. simpl. 
-      rewrite (invr_ge0 s).
-      unfold Order.le in H; simpl in H.
-      apply H.
-    -- unfold Order.le. simpl. auto.
-    -- unfold Order.le. simpl. auto.
+  have /= := IHx x erefl JMeq_refl. 
+  by case : << x >> => // r; case : ifP => H; rewrite ?leey // !lee_fin invr_ge0.
   - (* x1 `+ x2 *)
-  assert (H : 0%:E <= << x1 >>). {apply (IHx1 x1). reflexivity. auto. }
-  move : IHx1. move => _. 
-  assert (H0 : 0%:E <= << x2 >>). {apply (IHx2 x2). reflexivity. auto. }
-  move : IHx2. move => _.
-  simpl.
-  apply (lee_paddr H0 H).
+  rewrite /= lee_paddr //. rewrite IHx2 //. rewrite IHx1 //.
   -- (* x1 `* x2 *)
-  assert (H : 0%:E <= << x1 >>). {apply (IHx1 x1). reflexivity. auto. }
-  move : IHx1. move => _. 
-  assert (H0 : 0%:E <= << x2 >>). {apply (IHx2 x2). reflexivity. auto. }
-  move : IHx2. move => _.
-  simpl.
-  apply (mule_ge0 H H0).
+  rewrite /= mule_ge0 //. rewrite IHx1 //. rewrite IHx2 //.
 Qed.
 
-Lemma mulyn0 : forall x : \bar R, 0%:E < x -> +oo * x = +oo.
+Lemma maxe_id : forall x : \bar R, maxe x x = x.
 Proof. 
-  move=> x H. destruct x.
-  -  destruct (s%:E == 0%:E) eqn:H0.
-    -- 
-    assert (H1 : s%:E = 0). {apply (eqP H0). }
-    rewrite lt0e in H. 
-    destruct (predD1P H) as [H2 H3]. (*could not find a simpler one*)
-    unfold not in H2. contradiction.
-    -- 
-    unfold "*".
-    rewrite H0.
-    rewrite H.
-    reflexivity.
-  -
-  unfold "*".
-  simpl. 
-  rewrite H.
-  reflexivity.
-  -
-  unfold Order.lt in H. 
-  simpl in H. 
-  exfalso. 
-  apply Bool.diff_false_true. 
-  apply H.
+  by move => x; destruct (or_maxe x x) as [H0 | H0]; rewrite !H0.
 Qed.
 
-(*
-Lemma eqe_imp_lee : forall x1 x2 : \bar R, x1 == x2 -> x1 <= x2.
-Proof. 
-  move => x1 x2 H. rewrite (eqP H). destruct x2.
-  -
-  unfold Order.le. simpl. auto.
-  -
-  unfold Order.le. simpl. auto.
-  -
-  unfold Order.le. simpl. auto.
-Qed.
-*)
-
-Lemma id_maxe : forall x : \bar R, maxe x x = x.
-Proof. 
-  move => x. destruct (or_maxe x x) as [H0 | H0].
-  - by rewrite H0.
-  - by rewrite H0.
-Qed.
-
-Lemma eqF : forall x y : \bar R, x != y -> x == y = false.
+Lemma eqF : forall x y : R, x != y -> x == y = false.
 Proof. 
   move=> x y H. 
   apply : (contra_neqF _ H). move => H1. apply (eqP H1). 
 Qed.
 
-(*
-Lemma lte_not_lee : forall x1 x2 : \bar R, x1 < x2 -> ~ x2 <= x1.
-Proof.
-  move => x1 x2 H.  apply : (contra_lt_not _ H). move => H0. apply H0. 
-Qed.
-*)
+Lemma EFin_fin_num : forall s : R, s%:E \is a fin_num.
+Proof. 
+  move => s. 
+  apply fin_real. 
+  apply/andP. split. 
+  apply (ltNyr s).  
+  apply (ltry s).
+Qed. 
 
 Lemma maxeMr_nneg : forall k x1 x2 : \bar R, 
 0%:E <= k -> 0%:E <= x1 -> 0%:E <= x2 ->
 k * (maxe x1 x2) = maxe (k * x1) (k * x2).
 Proof. 
   move => k x1 x2 H H0 H1.
-  rewrite le_eqVlt in H.
-  rewrite le_eqVlt in H0.
+  rewrite le_eqVlt in H;
+  rewrite le_eqVlt in H0;
   rewrite le_eqVlt in H1.
   destruct (orP H) as [H2 | H2].
     - (*0%:E == k*) 
-    rewrite <- (eqP H2).
-    rewrite !mul0e.
-    by rewrite id_maxe.
+    by rewrite <- (eqP H2); rewrite !mul0e maxe_id.
     - (*0%:E < k*)
     destruct k.
       -- (* k = s%:E*)
-      assert (H4 : -oo < s%:E < +oo). 
-        {apply/andP. split. apply (ltNyr s).  apply (ltry s). }
-      apply fin_real in H4.
-      apply (maxeMr x1 x2 H4). apply H2.
+      apply/maxeMr. apply/EFin_fin_num. apply/H2. 
       -- (*k = +oo*)
       destruct (orP H0) as [H3 | H3].
         --- (*0%:E == x1*)
-        rewrite <- (eqP H3).
-        rewrite mule0.
+        rewrite <- (eqP H3); rewrite mule0.
         destruct (orP H1) as [H4 | H4].
           ---- (*0%:E == x2 *)
-          rewrite <- (eqP H4).
-          rewrite mule0.
-          rewrite id_maxe.
-          by rewrite mule0.
+          rewrite <- (eqP H4); by rewrite mule0 maxe_id mule0.
           ---- (*0%:E < x2*)
-          rewrite (mulyn0 H4). 
-          unfold maxe. 
-          rewrite lt0y.
-          rewrite H4.
-          unfold "*".
-          rewrite lt0y.
-          rewrite H4.
-          rewrite lt0e in H4.
-          destruct (andP H4) as [H5 H6].
-          simpl. apply eqF in H5. rewrite H5.
-          destruct x2. 
-            ----- (*x2 = s%:E*)
-            reflexivity. 
-            ----- (*x2 = +oo*)
-            reflexivity.
-            ----- (*x2 = -oo*)
-            unfold Order.le in H6. 
-            simpl in H6. 
-            exfalso. 
-            apply (Bool.diff_false_true H6).
+          rewrite !gt0_mulye /maxe. by rewrite lt0y //.
+          by rewrite H4. 
+          by rewrite H4. 
         --- (*0%:E < x1*)
         destruct (orP H1) as [H4 | H4].
           ---- (*0%:E == x2*)
-          rewrite <- (eqP H4).
-          rewrite mule0.
-          destruct x1.
-            ----- (*x1 = s%:E*)
-            destruct (s%:E == 0%:E) eqn:H5.
-              ------ (*(s%:E == 0%:E) = true*)
-              rewrite (eqP H5).
-              rewrite mule0.
-              rewrite !id_maxe.
-              by rewrite mule0.
-              ------ (*(s%:E == 0%:E) = false*)
-              rewrite (mulyn0 H3).
-              destruct (or_maxe s%:E 0%:E) as [H6 | H6].
-                ------- (*maxe s%:E 0%:E = s%:E*)
-                rewrite H6.
-                unfold maxe; simpl.
-                unfold "*". 
-                rewrite H5.
-                by rewrite H3.
-                ------- (* maxe s%:E 0%:E = 0%:E*)
-                rewrite maxC in H6.
-                unfold maxe in H6.
-                rewrite H3 in H6.
-                remember (negbT H5) as H7.
-                move : HeqH7. move => _.
-                rewrite <- contra.Internals.eqType_neqP in H7.
-                contradiction.
-            ----- (*x1 = +oo*)
-            rewrite mulyn0.
-            rewrite maxC.
-            unfold maxe.
-            by rewrite lt0y. 
-            rewrite maxC.
-            unfold maxe.
-            rewrite !lt0y.
-            auto.
-            ----- (*x1 = -oo*)
-            unfold maxe.
-            unfold "*".
-            simpl.
-            rewrite lt0y.
-            rewrite ltNy0.
-            simpl.
-            (unfold "0"%E).
-            simpl.
-            unfold "0".
-            assert (H5 : 
-              (GRing.isNmodule.zero (Real.class R))%:E 
-              == 
-              (GRing.isNmodule.zero (Real.class R))%:E = true). 
-              {auto. }
-            rewrite H5. reflexivity.
+          rewrite <- (eqP H4). 
+          by rewrite mule0 !gt0_mulye //= maxC /maxe H3 H3.
           ---- (*0%:E < x2*)
-          rewrite (mulyn0 H3); rewrite (mulyn0 H4).
-          rewrite id_maxe.
-          destruct (or_maxe x1 x2) as [H5 | H5].
-            ----- (*maxe x1 x2 = x1*)
-            by rewrite H5; rewrite (mulyn0 H3).
-            ----- (*maxe x1 x2 = x2*) 
-            by rewrite H5; rewrite (mulyn0 H4).
-      -- (*k = -oo*)       
-      destruct (orP H0) as [H3 | H3].
-        --- (*0%:E == x1*)
-        destruct (orP H1) as [H4 | H4].
-          ---- (*0%:E == x2*)
-          rewrite <- (eqP H3); rewrite <- (eqP H4).
-          by rewrite id_maxe; rewrite mule0; rewrite id_maxe.
-          ---- (*0%:E < x2*)
-          rewrite <- (eqP H3); rewrite mule0.
-          unfold maxe; rewrite H4.
-          unfold "*".
-          rewrite H4.
-          apply lt_eqF in H4 as H5.
-          by rewrite eq_sym; rewrite H5; rewrite H2.
-        --- (*0%:E < x1*)
-        destruct (orP H1) as [H4 | H4].
-          ---- (*0%:E == x2*)
-          rewrite <- (eqP H4).
-          rewrite mule0.
-          rewrite maxC. rewrite (maxC (-oo * x1)).
-          unfold maxe.
-          rewrite H3.
-          rewrite (gt0_mulNye H3).
-          by rewrite H2.
-          ---- (*0%:E < x2*)
-          rewrite (gt0_mulNye H3).
-          rewrite (gt0_mulNye H4).
-          rewrite id_maxe.
-          destruct (or_maxe x1 x2) as [H5 | H5].
-            ----- (* maxe x1 x2 = x1*)
-            by rewrite H5; rewrite (gt0_mulNye H3).
-            ----- (* maxe x1 x2 = x2*)
-            by rewrite H5; rewrite (gt0_mulNye H4).
+          rewrite !gt0_mulye // lt_max. 
+          by apply/orP; left. 
+      -- (*k = -oo*)    
+      by [].
 Qed.
 
-Lemma ldl_ten_dor : forall k a b : @expr R Fuzzy_T, 
+Lemma ldl_ten_dor : forall k a b : expr Fuzzy_T, 
 << k `* (a `\/ b) >> = << (k `* a ) `\/ (k `* b ) >>.
 Proof.
     move => k a b. simpl. rewrite maxeMr_nneg. reflexivity.
@@ -601,7 +376,7 @@ Proof.
       - by rewrite nneg_cap.
 Qed.
 
-Lemma ldl_ten_big_dor : forall s : seq (@expr R Fuzzy_T), forall k : @expr R Fuzzy_T, 
+Lemma ldl_ten_big_dor : forall s : seq (expr Fuzzy_T), forall k : expr Fuzzy_T, 
 << k `* (\ldl_or_ ( i <- s ) i) >> = << \ldl_or_ ( i <- s) (k `* i) >>.
 Proof. 
   move => s k.
@@ -615,17 +390,17 @@ Proof.
     by rewrite <- H; simpl.
 Qed.
 
-Lemma ldl_tenC : forall x1 x2 : @expr R Fuzzy_T, << x1 `* x2 >> = << x2 `* x1 >>.
+Lemma ldl_tenC : forall x1 x2 : expr Fuzzy_T, << x1 `* x2 >> = << x2 `* x1 >>.
 Proof.
   by move => x1 x2 /=; rewrite muleC.
 Qed.
 
-Lemma ldl_tenA : forall x1 x2 x3 : @expr R Fuzzy_T, << (x1 `* x2) `* x3 >> = << x1 `* (x2 `* x3) >>.
+Lemma ldl_tenA : forall x1 x2 x3 : expr Fuzzy_T, << (x1 `* x2) `* x3 >> = << x1 `* (x2 `* x3) >>.
 Proof.
   by move => x1 x2 x3 //=; rewrite muleA.
 Qed.
 
-Lemma ldl_ten1 : forall y x :@ expr R Fuzzy_T,  (*multiplicative identities*) (* how do I make 'y' an explicit argument?*)
+Lemma ldl_ten1 : forall y x : expr Fuzzy_T,  (*multiplicative identities*) (* how do I make 'y' an explicit argument?*)
 << y >> = 1 -> << x `* y >> = << x >> /\ << y `* x >> = << x >>.
 Proof.
   move => x y H //=. split.
@@ -635,8 +410,8 @@ Proof.
     by rewrite H; rewrite muleC; rewrite mule1.
 Qed.
 
-Lemma ldl_ten_1_is_unit : forall u : @expr R Fuzzy_T, (*unit elements*)
-<< u >> = 1 ->  exists v : @expr R Fuzzy_T, << u `* v >> = 1 /\ << v `* u >> = 1.
+Lemma ldl_ten_1_is_unit : forall u : expr Fuzzy_T, (*unit elements*)
+<< u >> = 1 ->  exists v : expr Fuzzy_T, << u `* v >> = 1 /\ << v `* u >> = 1.
 Proof.
   move => u H. 
   exists ldl_one. 
@@ -646,7 +421,7 @@ Proof.
   rewrite H //=. 
 Qed.
 
-Lemma ldl_ten_unitary : exists u : @expr R Fuzzy_T, exists v : @expr R Fuzzy_T, 
+Lemma ldl_ten_unitary : exists u : expr Fuzzy_T, exists v : expr Fuzzy_T, 
 << u `* v >> = 1 /\ << v `* u >> = 1.
 Proof.
   exists ldl_one. exists ldl_one. 
@@ -654,7 +429,7 @@ Proof.
   by rewrite mule1 //=.
 Qed.
 
-Lemma lt_EFin : forall a : \bar R, 0%R <= a < +oo -> exists s : R, a = s%:E.
+Lemma le0e_lte0_EFin : forall a : \bar R, 0%R <= a < +oo -> exists s : R, a = s%:E.
 Proof.
   move => a H. 
   destruct (andP H) as [H0 H1].
@@ -675,8 +450,7 @@ Proof.
     rewrite <- H4. by exists 0%R. 
 Qed.
 
-(*
-Lemma aku : forall a b : @expr R Fuzzy_T, 
+Lemma ldl_dual_dten : forall a b : expr Fuzzy_T, 
 0 < << a >> < +oo /\ 0 < << b >> < +oo -> 
 << `~ (a `* b) >> = << (`~ a) `* (`~ b) >>.
 Proof. 
@@ -684,33 +458,119 @@ Proof.
   destruct H as [H H0].
   destruct (andP H) as [H1 H2].
   destruct (andP H0) as [H3 H4].
-  apply ltW in H1 as H5.
-  apply ltW in H3 as H6.
-  assert (H7 : 0%R <= <<a>> < +oo). 
-  {apply/andP. split. apply H5. apply H2. }
-  assert (H8 : 0%R <= <<b>> < +oo). 
-  {apply/andP. split. apply H6. apply H4. }
-  remember (lt_EFin H7) as H9; move : HeqH9; move => _.
-  remember (lt_EFin H8) as H10; move : HeqH10; move => _.
-  destruct H9 as [s H9].
-  destruct H10 as [v H10].
-  simpl. rewrite H9. rewrite H10.
-*)
+  assert (H5 : exists s : R, << a >> = s%:E). 
+  {apply/le0e_lte0_EFin. apply/andP. split. apply (ltW H1). apply H2. }
+  assert (H6 : exists s : R, << b >> = s%:E). 
+  {apply/le0e_lte0_EFin. apply/andP. split. apply (ltW H3). apply H4. }
+  destruct H5 as [s H5].
+  destruct H6 as [v H6].
+  rewrite //= H5 H6. 
+  rewrite H6 in H3.
+  case (s == 0%R) eqn:H7. 
+    - (*s == 0%R = true*)
+    rewrite (eqP H7) mul0e /= eq_refl.
+    case (v == 0%R) eqn:H8. 
+      -- (*v == 0%R = true*)
+      by rewrite mulyy. 
+      -- (*v == 0%R = false*)
+      rewrite /Order.lt /= in H3.
+      by rewrite gt0_mulye //= /Order.lt /= invr_gt0 H3. 
+    - (*s == 0%R = false*)
+    rewrite [v == _]eq_sym.
+    apply lt_eqF in H3 as H8.
+    rewrite eqe in H8.
+    rewrite //= H8. 
+    rewrite eqF.
+    rewrite invrM' /mule //.
+    (*prove s != 0%R*)
+    rewrite H7 //.
+    (*prove (s * v)%R != 0%R*)
+    rewrite mulf_neq0 //=.
+    (*prove s != 0%R*)
+    by rewrite H7.
+    (*prove v != 0%R*)
+    by rewrite eq_sym H8.
+Qed. 
 
-(*
-Lemma ldl_dual_le : forall a b c : @expr R Fuzzy_T, << a `* b >> <= << `~ c >> <-> << a >> <= << `~ (b `* c) >>.
-Proof.
-  move => a b c. split.
-    - (*prove <<a `* b>> <= <<`~ c>> -> <<a>> <= <<b `* c>>*)
-    admit.
-    - (*prove <<a>> <= <<`~ b `* c>> -> <<a `* b>> <= <<`~ c>>*)
-    move => H //=.
-    destruct << c >> eqn:H0.
-      -- (*<<c>> = s%:E*)
-      destruct (s == 0%R) eqn:H1.
-        --- (*(s == 0%R) = true*)
-        rewrite leey //=.
-        --- (*(s == 0%R) = false*)
-*)
+Lemma ldl_dual_le : forall a b c : expr Fuzzy_T, 
+<< a `* b >> <= << `~ c >> <-> << a >> <= << `~ (b `* c) >>.
+Proof. 
+  move => a b c /=. 
+  have a_nneg := nneg_cap a. 
+  have b_nneg := nneg_cap b. 
+  have c_nneg := nneg_cap c. 
+  case << c >> eqn:H.
+  - (*<<c>> = s%:E*)
+  case (s == 0%R) eqn:H0.
+    -- (*(s == 0%R) = true*)
+    by rewrite (eqP H0) /= leey mule0 /= eq_refl leey.
+    -- (*(s == 0%R) = false*)
+    case << b >> eqn:H1.
+      --- (*<<b>> = s0%:E*)
+      rewrite /=.
+      case (s0 == 0%R) eqn:H2.
+        ---- (*(s0 == 0%R) = true*)
+        rewrite (eqP H2) mule0 mul0r eq_refl leey /Order.le /= invr_ge0 //.
+        ---- (*(s0 == 0%R) = false*)
+        rewrite eqF. rewrite <- (lee_pdivlMr << a >> ). 
+        rewrite muleC invrM' /mule //=. 
+        (*prove s0 != 0%R*)
+        by rewrite H2.
+        (*prove (0 < s0)%R*)
+        rewrite lt_neqAle.
+        apply/andP. split. 
+          ----- (*prove 0%R != s0*)
+          by rewrite eq_sym H2.
+          ----- (*prove 0%R <= s0*)
+          apply /b_nneg. 
+        (*prove (s0 * s)%R != 0%R*)
+        apply /mulf_neq0.
+        (*prove s0 != 0%R*)
+        by rewrite H2.
+        (*prove s != 0%R*)
+        by rewrite H0.
+    -- (*(s == 0%R) = false*)
+    case (<< a >> == 0%R) eqn:H2.
+      --- (*(<<a>> == 0%R) = true*)
+      unfold "*". unfold "==". simpl. 
+      rewrite //= lt0y H0 !lt_neqAle (eq_sym 0 s%:E). 
+      unfold "==". simpl. rewrite H0 //= c_nneg a_nneg.
+      by rewrite (eqP H2) //= eq_refl le_refl /Order.le //= invr_ge0.
+      --- (*(<<a>> == 0%R) = false*)
+      assert (H3 : 0 < << a >> ). 
+      {rewrite lt_neqAle. apply/andP. split. rewrite eq_sym H2 //. rewrite a_nneg //. }
+      rewrite (gt0_muley H3).
+      unfold "*". unfold "==". simpl.
+      rewrite H0 lt_neqAle. unfold "!=". simpl. unfold "==". simpl. 
+      rewrite eq_sym H0 c_nneg //=.
+      rewrite {1}/Order.le //=.
+      apply lt_geF in H3 as H4. rewrite H4 //.
+      --- (*<<b>> = -oo *)
+      by [].
+  - (*<<c>> = +oo*)
+  case (<< b >> == 0%R) eqn:H0.
+    -- (*(<<b>> == 0%R) = true*)
+    by rewrite (eqP H0) mule0 mul0e /= eq_refl le_refl leey.
+    -- (*(<<b>> == 0%R) = false*)
+    assert (H1 : 0 < << b >> ). 
+    {rewrite lt_neqAle. apply/andP. split. rewrite eq_sym H0 //. rewrite b_nneg //. }
+    rewrite (gt0_muley H1). 
+    case (<< a >> == 0%R) eqn:H2.
+      --- (*(<<a>> == 0%R) = true*)
+      rewrite (eqP H2) mul0e //=.
+      --- (*(<<a>> == 0%R) = false*)
+      assert (H3 : 0 < << a >> ). 
+      {rewrite lt_neqAle. apply/andP. split. rewrite eq_sym H2 //. rewrite a_nneg //. }
+      rewrite (lt_geF H3).
+      rewrite lt_geF //.
+      (*prove 0%R < <<a>> * <<b>>*)
+      rewrite (mule_gt0 H3 H1) //.
+  - (*<<c>> = +oo*)
+  by [].
+Qed.
 
+Lemma ldl_cap_sound_left : forall e : expr Fuzzy_T, forall b : constant, 
+<< e >> != 1 -> << e >> = << ldl_const b >> -> [[ e ]] = [[ ldl_const b ]].
+Proof. 
+Admitted.
 End some_properties.
