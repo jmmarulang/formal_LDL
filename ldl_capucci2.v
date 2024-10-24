@@ -30,15 +30,14 @@ Inductive ldl_type :=
   | Real_T
   | Vector_T of nat
   | Index_T of nat
-  | Fun_T of nat & nat.
+  | Fun_T of nat & nat
+  | FFun_T.
 
 End ldl_type. 
 
 Section constant.
-Context {R : realType}.
 
 Inductive constant := 
-  | fuzzy_c of R
   | true_c | false_c 
   | one_c | zero_c 
   | top_c | bot_c.
@@ -46,20 +45,26 @@ Inductive constant :=
 End constant. 
 
 Section expr.
-Context {R : realType}.
+
+Context {R : realType} {I : Type}. (*How do I specify that 'I' must be a measure space? *)
 
 Inductive expr : ldl_type -> Type :=
+    (* fuzzy base expressions *)
+    | ldl_const : constant -> expr Fuzzy_T
     (* base expressions *)
-    | ldl_const :  @constant R -> expr Fuzzy_T
     | ldl_real : R -> expr Real_T
     | ldl_idx : forall n, 'I_n -> expr (Index_T n) (*Like the fin type? -J*)
     | ldl_vec : forall n, n.-tuple R -> expr (Vector_T n)
-    (* connectives *)
+    (* fuzzy connectives *)
     | ldl_and : expr Fuzzy_T  -> expr Fuzzy_T  -> expr Fuzzy_T 
     | ldl_or  : expr Fuzzy_T  -> expr Fuzzy_T  -> expr Fuzzy_T 
     | ldl_dual : expr Fuzzy_T  -> expr Fuzzy_T
     | ldl_sum : expr Fuzzy_T  -> expr Fuzzy_T  -> expr Fuzzy_T 
     | ldl_ten : expr Fuzzy_T  -> expr Fuzzy_T  -> expr Fuzzy_T 
+    | ldl_scm : \bar R -> expr Fuzzy_T -> expr Fuzzy_T
+    (* fuzzy networks and applications *)
+    | ldl_ffun : (I -> \bar R) -> expr FFun_T
+    | ldl_fapp : expr FFun_T -> I -> expr Fuzzy_T
     (* networks and applications *)
     | ldl_fun : forall n m, (n.-tuple R -> m.-tuple R) -> expr (Fun_T n m) 
     | ldl_app : forall n m, expr (Fun_T n m) -> expr (Vector_T n) -> expr (Vector_T m)
@@ -75,18 +80,20 @@ Notation ldl_one := (ldl_const one_c).
 Notation ldl_zero := (ldl_const zero_c).
 Notation ldl_top := (ldl_const top_c). 
 Notation ldl_bot := (ldl_const bot_c). 
-Notation ldl_fuzzy r := (ldl_const (fuzzy_c r)).
+Notation ldl_fuzzy r := (ldl_fapp (ldl_ffun (fun _ => r))).
 
+Notation "` f [ a ]" := (ldl_fapp f a) (at level 75).
 Notation "a `/\ b" := (ldl_and a b) (at level 45).
 Notation "a `\/ b" := (ldl_or a b) (at level 45).
 Notation "a `+ b" := (ldl_sum a b) (at level 45).
 Notation "a `* b" := (ldl_ten a b) (at level 45).
 Notation "`~ a"    := (ldl_dual a) (at level 75). (* is the DUAL operator NOT negation -J*)
+Notation "k `° a" := (ldl_scm k a) (at level 75).
 Notation "a `~* b" := (`~ (`~ a `* `~ b)) (at level 45).
 Notation "a `~+ b" := (`~ (`~ a `+ `~ b)) (at level 45).
-Notation "a `=> b" := (`~ a `~* b ) (at level 55).
+Notation "a `-o b" := (`~ a `~* b ) (at level 55). (*division / implication / <= ?*)
 
-Notation "\ldl_or_ ( i <- s )" := (\big[ldl_or/(@ldl_false)]_(i <- s) i).
+Notation "\ldl_or_ ( i <- r )" := (\big[ldl_or/(@ldl_false)]_(i <- r) i).
 
 Notation "\ldl_or_ ( i <- r | P ) F" := 
 (\big[ldl_or/ldl_false]_(i <- r | P) F ) (at level 45).
@@ -94,55 +101,13 @@ Notation "\ldl_or_ ( i <- r | P ) F" :=
 Notation "\ldl_or_ ( i <- r ) F" := 
 (\big[ldl_or/@ldl_false]_(i <- r) F ) (at level 45).
 
-Local Open Scope ldl_scope.
-
-Lemma expr_ind' (R : realType) :
-  forall P : forall s : ldl_type, expr s -> Prop, 
-    (forall s : @constant R, P Fuzzy_T (ldl_const s)) -> 
-    (forall s : R, P Real_T (ldl_real s) ) ->
-    (forall n (o : 'I_n), P (Index_T n) (ldl_idx o)) -> 
-    (forall n (t : n.-tuple R), P (Vector_T n) (ldl_vec t)) ->
-    (forall s n : expr Fuzzy_T, P Fuzzy_T s -> P Fuzzy_T n -> P Fuzzy_T (s `/\ n)) ->
-    (forall s n : expr Fuzzy_T, P Fuzzy_T s -> P Fuzzy_T n -> P Fuzzy_T (s `\/ n)) ->
-    (forall s : expr Fuzzy_T, P Fuzzy_T s -> P Fuzzy_T (`~ s)) ->
-    (forall s n : expr Fuzzy_T, P Fuzzy_T s -> P Fuzzy_T n -> P Fuzzy_T (s `+ n)) ->
-    (forall s n : expr Fuzzy_T, P Fuzzy_T s -> P Fuzzy_T n -> P Fuzzy_T (s `* n)) ->
-    (forall (n m : nat) (t : n.-tuple R -> m.-tuple R), P (Fun_T n m) (ldl_fun t)) ->
-    (forall (n m : nat) (e : expr (Fun_T n m)),
-     P (Fun_T n m) e ->
-     forall e0 : expr (Vector_T n), P (Vector_T n) e0 -> P (Vector_T m) (ldl_app e e0)) ->
-    (forall (n : nat) (e : expr (Vector_T n)),
-     P (Vector_T n) e ->
-     forall e0 : expr (Index_T n), P (Index_T n) e0 -> P Real_T (ldl_lookup e e0)) ->
-  forall (s : ldl_type) (e : expr s), P s e. 
-Proof. 
-  move => P H H0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 s e.
-  revert e.
-  revert s. 
-  fix F1 2.
-  intros.  
-  destruct e. 
-    - apply H.
-    - apply H0.
-    - apply H1.
-    - apply H2. 
-    - apply H3; apply F1; apply F1.   
-    - apply H4; apply F1; apply F1. 
-    - apply H5; apply F1. 
-    - apply H6; apply F1; apply F1.
-    - apply H7; apply F1; apply F1.
-    - apply H8. 
-    - apply H9; apply F1. 
-    - apply H10; apply F1. 
-Qed.  
-Local Close Scope ldl_scope.
-
 Section type_translation.
-Context {R : realType}.
+Context {R : realType} {I : Type}.
 
 Definition type_translation (t : ldl_type) : Type:=
   match t with
   | Fuzzy_T => \bar R
+  | FFun_T => I -> \bar R
   | Real_T => R
   | Vector_T n => n.-tuple R
   | Index_T n => 'I_n
@@ -152,6 +117,7 @@ end.
 Definition bool_type_translation (t : ldl_type) : Type :=
   match t with
   | Fuzzy_T => bool
+  | FFun_T => I -> \bar R
   | Real_T => R
   | Vector_T n => n.-tuple R
   | Index_T n => 'I_n
@@ -164,9 +130,9 @@ Section bool_translation.
 Local Open Scope ring_scope.
 Local Open Scope ldl_scope.
 Local Open Scope ereal_dual_scope.
-Context {R : realType}.
+Context {R : realType} {I : Type}.
 
-Fixpoint bool_translation {t} (e : @expr R t) : bool_type_translation t := (*????*)
+Fixpoint bool_translation {t} (e : @expr R I t) : bool_type_translation t := (*????*)
   match e in expr t return bool_type_translation t with
   | ldl_true => true
   | ldl_false => false
@@ -174,7 +140,10 @@ Fixpoint bool_translation {t} (e : @expr R t) : bool_type_translation t := (*???
   | ldl_zero => false
   | ldl_top => true
   | ldl_bot => false
-  | ldl_fuzzy r => ~~ (r < 1) %R 
+  | k `° a => 
+    if << a >> is true (*????*)
+      then true 
+      else false 
   | ldl_real r => r 
   | ldl_idx n i => i
   | ldl_vec n t => t
@@ -184,8 +153,10 @@ Fixpoint bool_translation {t} (e : @expr R t) : bool_type_translation t := (*???
   | `~ a => ~~ << a >>
   | a `+ b => << a >> || << b >>
   | a `* b => << a >> && << b >> 
+  | `f [a] => 1 <= `| << f >> a | (*???*)
 
-  | ldl_fun n m f => f
+  | ldl_ffun f => f  
+  | ldl_fun n m f => f 
   | ldl_app n m f v => << f >> << v >>
   | ldl_lookup n v i => tnth << v >> << i >>
   end
@@ -199,9 +170,9 @@ Section fuzzy_translation.
 Local Open Scope ring_scope.
 Local Open Scope ldl_scope.
 Local Open Scope ereal_scope.
-Context {R : realType}.
+Context {R : realType} {I : Type}.
 
-Fixpoint translation {t} (e : @expr R t) {struct e} : type_translation t := (*what is struct? -J*)
+Fixpoint translation {t} (e : @expr R I t) {struct e} : type_translation t := (*what is struct? -J*)
   match e in expr t return type_translation t with 
   | ldl_true => +oo
   | ldl_false => 0%:E
@@ -209,8 +180,7 @@ Fixpoint translation {t} (e : @expr R t) {struct e} : type_translation t := (*wh
   | ldl_zero => 0%:E
   | ldl_top => +oo
   | ldl_bot => 1%:E
-  | ldl_fuzzy r => `| r | %:E
-
+  
   | ldl_real r => r
   | ldl_idx n i => i
   | ldl_vec n t => t
@@ -224,7 +194,13 @@ Fixpoint translation {t} (e : @expr R t) {struct e} : type_translation t := (*wh
     else 0
   | a `+ b => << a >> + << b >>
   | a `* b => << a >> * << b >>
+  | `f [a] => `| << f >> a |(*???*)
+  | k `° a => 
+    if k is p%:E 
+    then << a >> `^ `|p| 
+    else +oo * << a >>
 
+  | ldl_ffun f => f  
   | ldl_fun n m f => f
   | ldl_app n m f v => << f >> << v >>
   | ldl_lookup n v i => tnth << v >> << i >>
@@ -237,20 +213,14 @@ Section some_properties.
 Local Open Scope ring_scope.
 Local Open Scope ereal_scope.
 Local Open Scope ldl_scope.
-Context {R : realType}.
+Context {R : realType} {I : Type}.
 
-Notation "<< e >>" := (@translation R _ e) : ldl_scope.
-Notation "[[ e ]]" := (@bool_translation R _ e) : ldl_scope.
+Notation "<< e >>" := (@translation R I _ e) : ldl_scope.
+Notation "[[ e ]]" := (@bool_translation R I _ e) : ldl_scope.
 
 Lemma total_cap : forall x : expr Fuzzy_T, exists y : \bar R, y = << x >>. 
 Proof. 
-  dependent induction x.
-  - eapply ex_intro. auto. 
-  - eapply ex_intro. auto. 
-  - eapply ex_intro. auto. 
-  - eapply ex_intro. auto. 
-  - eapply ex_intro. auto. 
-  - eapply ex_intro. auto. 
+  dependent induction x; eapply ex_intro; auto.
 Qed. 
 
 Lemma or_mine : forall x1 x2 : \bar R, mine x1 x2 = x1 \/  mine x1 x2 = x2.
@@ -307,6 +277,10 @@ Proof.
   rewrite /= lee_paddr //. rewrite IHx2 //. rewrite IHx1 //.
   -- (* x1 `* x2 *)
   rewrite /= mule_ge0 //. rewrite IHx1 //. rewrite IHx2 //.
+  -- (* e `° x *)
+  case e eqn:H; rewrite //= ?poweR_ge0 // mule_ge0 //= IHx //. 
+  -- (* ` x [i] *)
+  by rewrite abse_ge0 //.
 Qed.
 
 Lemma maxe_id : forall x : \bar R, maxe x x = x.
@@ -569,8 +543,10 @@ Proof.
   by [].
 Qed.
 
-Lemma ldl_cap_sound_left : forall e : expr Fuzzy_T, forall b : constant, 
-<< e >> != 1 -> << e >> = << ldl_const b >> -> [[ e ]] = [[ ldl_const b ]].
+Definition is_cap b (x : \bar R) := if b then 1 <= x else x < 1.
+
+Lemma ldl_cap_sound_left : forall e : expr Fuzzy_T, forall c : constant, 
+<< e >> != 1 -> << e >> = << ldl_const c >> -> [[ e ]] = [[ ldl_const c ]].
 Proof. 
 Admitted.
 
